@@ -1,0 +1,15 @@
+--- Final Design and Analysis Window ---
+
+[1] ANALYTICAL RESULTS (Ground Truth)
+ - Characteristic Impedance (Z0): 49.93 + 0.01j Ω
+ - Attenuation Constant (α): 0.0081 Np/m
+ - Phase Constant (β): 4.7073 rad/m
+ - SWR: 1.897
+ - Input Impedance (Z_in): 74.55 + 29.09j Ω
+
+[2] NEURAL NETWORK PREDICTION
+ - Characteristic Impedance (Z0): 49.89 + 0.00j Ω
+ - Attenuation Constant (α): 0.00809 Np/m
+ - Phase Constant (β): 4.7905 rad/m
+ - SWR: 1.686
+ - Input Impedance (Z_in): Not predicted by the current ML model configuration.
