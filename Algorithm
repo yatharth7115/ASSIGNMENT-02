@@ -1,0 +1,71 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+class TransmissionLine:
+    """
+    Models a general transmission line using primary and secondary parameters.
+    Includes reflection, impedance, voltage/current distribution, and plotting.
+    """
+
+    def __init__(self, R, L, G, C, freq, length, ZL):
+        """Line primary constants and configuration"""
+        self.R = R            # Series resistance (Ohm/m)
+        self.L = L            # Series inductance (H/m)
+        self.G = G            # Shunt conductance (S/m)
+        self.C = C            # Shunt capacitance (F/m)
+        self.freq = freq      # Operating frequency (Hz)
+        self.length = length  # Line length (m)
+        self.ZL = ZL          # Load impedance (Ohm)
+
+        self.omega = 2 * np.pi * self.freq # Angular frequency
+
+        # Calculate derived parameters
+        self._compute_secondary_parameters()
+        self.gamma_L = self._compute_reflection_coefficient()
+        self.swr = self._compute_swr()
+        self.Z_in = self._compute_input_impedance()
+
+    def _compute_secondary_parameters(self):
+        """Calculates characteristic impedance and propagation constant."""
+        Z = self.R + 1j * self.omega * self.L
+        Y = self.G + 1j * self.omega * self.C
+
+        self.Z0 = np.sqrt(Z / Y)      # Characteristic Impedance
+        self.gamma = np.sqrt(Z * Y)   # Propagation constant
+        self.alpha = self.gamma.real  # Attenuation constant (Np/m)
+        self.beta = self.gamma.imag   # Phase constant (rad/m)
+
+    def _compute_reflection_coefficient(self):
+        """Returns reflection coefficient at the load."""
+        return (self.ZL - self.Z0) / (self.ZL + self.Z0)
+
+    def _compute_swr(self):
+        """Computes the standing wave ratio."""
+        gamma_abs = np.abs(self.gamma_L)
+        return (1 + gamma_abs) / (1 - gamma_abs)
+
+    def _compute_input_impedance(self):
+        """Evaluates the input impedance at the source end."""
+        tanh_term = np.tanh(self.gamma * self.length)
+        num = self.ZL + self.Z0 * tanh_term
+        den = self.Z0 + self.ZL * tanh_term
+        return self.Z0 * (num / den)
+# Example: Higher frequency line with different load and parameters (e.g., semi-rigid coax at 500 MHz)
+tx_line = TransmissionLine(
+    R=0.02,         # Series resistance (Ohm/m) - lower than RG-58
+    L=180e-9,       # Inductance (H/m)
+    G=5e-6,         # Conductance (S/m) - slightly higher leakage
+    C=88e-12,       # Capacitance (F/m)
+    freq=500e6,     # Operating frequency: 500 MHz
+    length=3,       # Line length: 3 meters
+    ZL=complex(100, 50) # Complex load: mismatched (e.g., antenna with reactance)
+)
+
+# 1. Print transmission line characteristics
+tx_line.summarize()
+
+# 2. Show voltage and current at a specific distance from load
+tx_line.display_voltage_and_current_at_point(d=2.0) # 2 meters from load
+
+# 3. Plot the standing wave patterns for voltage and current
+tx_line.plot_waveforms()
