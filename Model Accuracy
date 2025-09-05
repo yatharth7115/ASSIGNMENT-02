@@ -1,0 +1,56 @@
+from sklearn.neural_network import MLPRegressor
+import warnings
+from sklearn.exceptions import ConvergenceWarning
+
+# Suppress convergence warnings from MLPRegressor for clean output
+warnings.filterwarnings("ignore", category=ConvergenceWarning)
+
+# ===============================================================
+# TRAINING THE NEURAL NETWORK MODEL (MLPRegressor)
+# ===============================================================
+print("\n--> Training Neural Network (MLPRegressor)...")
+
+# Define the neural network model with a multi-layer architecture
+model = MLPRegressor(
+    hidden_layer_sizes=(128, 128, 64),  # Three hidden layers
+    activation='relu',                 # ReLU activation function
+    solver='adam',                     # Adam optimizer
+    max_iter=1000,                     # Max training iterations
+    random_state=42,                   # For reproducibility
+    alpha=1e-4,                        # L2 regularization (prevents overfitting)
+    learning_rate_init=0.001,          # Initial learning rate
+    early_stopping=True,               # Stop early if no improvement
+    n_iter_no_change=20                # Patience for early stopping
+)
+
+# Train the model using the scaled training data
+model.fit(X_train_scaled, y_train_scaled)
+print("Model training complete.")
+
+from sklearn.metrics import r2_score
+
+# ===============================================================
+# STEP 5: MODEL PERFORMANCE EVALUATION
+# ===============================================================
+print("\n4. Evaluating model performance...")
+
+# Generate predictions on the scaled test set
+y_pred_scaled = model.predict(X_test_scaled)
+
+# Transform predictions and actual values back to original scale
+y_pred = scaler.inverse_transform(y_pred_scaled)
+y_test_actual = scaler.inverse_transform(y_test_scaled)
+
+# Display evaluation results
+print("\n--- R-SQUARE (R2) SCORE: MODEL EVALUATION RESULTS ---")
+total_r2 = 0
+
+# Calculate R-square for each output feature
+for i, name in enumerate(targets):
+    r2 = r2_score(y_test_actual[:, i], y_pred[:, i])
+    total_r2 += r2
+
+# Compute average R-square score across all targets
+avg_accuracy = total_r2 / len(targets)
+print(f"Accuracy: {(avg_accuracy * 100):.2f}%")
+print("....................................................")
