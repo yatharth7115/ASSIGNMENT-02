@@ -1,7 +1,3 @@
-Of course. Here is a comprehensive README file for the project.
-
------
-
 # Transmission Line Parameter Prediction using Neural Networks
 
 This project provides a dual approach to analyzing electrical transmission lines. It combines a robust **analytical simulation** based on fundamental physics with a **machine learning model** trained to predict the line's electrical behavior from its physical properties.
@@ -45,7 +41,7 @@ pip install numpy pandas scikit-learn matplotlib
 
 -----
 
-## 🚀 How to Use
+## How to Use
 
 The script is designed to be run from top to bottom, performing a sequence of tasks from data generation to final analysis.
 
