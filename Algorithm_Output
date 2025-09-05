@@ -1,0 +1,13 @@
+Transmission Line Summary --
+Frequency       : 500.00 MHz
+Z0 (char. imp.) : 45.43-0.00j Ω
+γ (prop. const): 0.0003+11.9215j
+α (attenuation) : 0.0003 Np/m
+β (phase const.): 11.9215 rad/m
+ΓL (reflection) : 0.423+0.106j
+SWR             : 2.742
+Zin (input imp.): 82.49+55.39j Ω
+
+At 2.00 meters from load
+Voltage: 0.207-0.503j   [V] = 0.542 V, Phase = -67.57°
+Current: 0.007-0.030j   [I] = 0.031 A, Phase = -76.24°
