@@ -47,3 +47,29 @@ def analysis_window(input_params, model, scaler_x, scaler_y):
     # Define input feature order for the model
     features = ['R', 'L', 'G', 'C', 'freq', 'length', 'ZL_real', 'ZL_imag']
     input_features = input_df[features]
+# Scale features using the training scaler
+input_scaled = scaler_x.transform(input_features)
+
+# Make predictions
+pred_scaled = model.predict(input_scaled)
+
+# Inverse transform predictions back to original units
+pred_real = scaler_y.inverse_transform(pred_scaled)[0]
+
+# Map predicted outputs to their corresponding labels
+targets = ['Z0_real', 'Z0_imag', 'alpha', 'beta', 'SWR']
+results = dict(zip(targets, pred_real))
+
+# Display predictions
+print(f" - Characteristic Impedance (Z0): ({results['Z0_real']:.2f} + {results['Z0_imag']:.2f}j) Ω")
+print(f" - Attenuation Constant (α): {results['alpha']:.4f} Np/m")
+print(f" - Phase Constant (β): {results['beta']:.4f} rad/m")
+print(f" - SWR: {results['SWR']:.3f}")
+print(f" - Input Impedance (Z_in): Not predicted in this version")
+print("...")
+
+# -----------------------------------------------------------------
+# 3. Visualize Standing Wave Pattern (Analytical)
+# -----------------------------------------------------------------
+print("\n[3] STANDING WAVE PATTERN (Analytical)")
+line.plot_waveforms() # Use analytical line to plot voltage & current waveforms
