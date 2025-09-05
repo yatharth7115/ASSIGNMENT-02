@@ -3,69 +3,123 @@ import matplotlib.pyplot as plt
 
 class TransmissionLine:
     """
-    Models a general transmission line using primary and secondary parameters.
-    Includes reflection, impedance, voltage/current distribution, and plotting.
+    A class to model and analyze a general transmission line.
     """
-
     def __init__(self, R, L, G, C, freq, length, ZL):
-        """Line primary constants and configuration"""
-        self.R = R            # Series resistance (Ohm/m)
-        self.L = L            # Series inductance (H/m)
-        self.G = G            # Shunt conductance (S/m)
-        self.C = C            # Shunt capacitance (F/m)
-        self.freq = freq      # Operating frequency (Hz)
-        self.length = length  # Line length (m)
-        self.ZL = ZL          # Load impedance (Ohm)
+        # Primary Constants and Operating Conditions
+        self.R = R  # Resistance per meter (Ohm/m)
+        self.L = L  # Inductance per meter (H/m)
+        self.G = G  # Conductance per meter (S/m)
+        self.C = C  # Capacitance per meter (F/m)
+        self.freq = freq  # Frequency (Hz)
+        self.length = length  # Length of the line (m)
+        self.ZL = complex(ZL)  # Load Impedance (Ohm)
 
-        self.omega = 2 * np.pi * self.freq # Angular frequency
+        # Derived values
+        self.omega = 2 * np.pi * self.freq
 
-        # Calculate derived parameters
-        self._compute_secondary_parameters()
-        self.gamma_L = self._compute_reflection_coefficient()
-        self.swr = self._compute_swr()
-        self.Z_in = self._compute_input_impedance()
+        # Calculate all secondary parameters on initialization
+        self._calculate_secondary_constants()
+        self.gamma_L = self.calculate_reflection_coefficient()
+        self.swr = self.calculate_swr()
+        self.Z_in = self.calculate_input_impedance()
 
-    def _compute_secondary_parameters(self):
-        """Calculates characteristic impedance and propagation constant."""
-        Z = self.R + 1j * self.omega * self.L
-        Y = self.G + 1j * self.omega * self.C
+    def _calculate_secondary_constants(self):
+        """Calculates Z0 (Characteristic Impedance) and gamma (Propagation Constant)."""
+        Z_jwL = self.R + 1j * self.omega * self.L
+        Y_jwC = self.G + 1j * self.omega * self.C
 
-        self.Z0 = np.sqrt(Z / Y)      # Characteristic Impedance
-        self.gamma = np.sqrt(Z * Y)   # Propagation constant
-        self.alpha = self.gamma.real  # Attenuation constant (Np/m)
-        self.beta = self.gamma.imag   # Phase constant (rad/m)
+        self.Z0 = np.sqrt(Z_jwL / Y_jwC)
+        self.gamma = np.sqrt(Z_jwL * Y_jwC)
+        self.alpha = self.gamma.real # Attenuation constant
+        self.beta = self.gamma.imag  # Phase constant
 
-    def _compute_reflection_coefficient(self):
-        """Returns reflection coefficient at the load."""
+    def calculate_reflection_coefficient(self):
+        """Calculates the load reflection coefficient."""
         return (self.ZL - self.Z0) / (self.ZL + self.Z0)
 
-    def _compute_swr(self):
-        """Computes the standing wave ratio."""
-        gamma_abs = np.abs(self.gamma_L)
-        return (1 + gamma_abs) / (1 - gamma_abs)
+    def calculate_swr(self):
+        """Calculates the Standing Wave Ratio (SWR)."""
+        return (1 + np.abs(self.gamma_L)) / (1 - np.abs(self.gamma_L))
 
-    def _compute_input_impedance(self):
-        """Evaluates the input impedance at the source end."""
-        tanh_term = np.tanh(self.gamma * self.length)
-        num = self.ZL + self.Z0 * tanh_term
-        den = self.Z0 + self.ZL * tanh_term
-        return self.Z0 * (num / den)
-# Example: Higher frequency line with different load and parameters (e.g., semi-rigid coax at 500 MHz)
-tx_line = TransmissionLine(
-    R=0.02,         # Series resistance (Ohm/m) - lower than RG-58
-    L=180e-9,       # Inductance (H/m)
-    G=5e-6,         # Conductance (S/m) - slightly higher leakage
-    C=88e-12,       # Capacitance (F/m)
-    freq=500e6,     # Operating frequency: 500 MHz
-    length=3,       # Line length: 3 meters
-    ZL=complex(100, 50) # Complex load: mismatched (e.g., antenna with reactance)
-)
+    def calculate_input_impedance(self):
+        """Calculates the input impedance of the line."""
+        numerator = self.ZL + self.Z0 * np.tanh(self.gamma * self.length)
+        denominator = self.Z0 + self.ZL * np.tanh(self.gamma * self.length)
+        return self.Z0 * (numerator / denominator)
 
-# 1. Print transmission line characteristics
-tx_line.summarize()
+    def get_voltage_and_current(self, d):
+        """
+        Calculates normalized voltage and current at a distance 'd' from the load.
+        Assumes incident voltage V0+ is 1 for normalization.
+        """
+        Vd = np.exp(self.gamma * d) + self.gamma_L * np.exp(-self.gamma * d)
+        Id = (1 / self.Z0) * (np.exp(self.gamma * d) - self.gamma_L * np.exp(-self.gamma * d))
+        return Vd, Id
 
-# 2. Show voltage and current at a specific distance from load
-tx_line.display_voltage_and_current_at_point(d=2.0) # 2 meters from load
+    def display_voltage_and_current_at_point(self, d):
+        """
+        Calculates and prints the voltage and current at a specific distance 'd' from the load.
+        """
+        if d > self.length or d < 0:
+            print(f"Error: Distance {d}m is outside the line length of {self.length}m.")
+            return
 
-# 3. Plot the standing wave patterns for voltage and current
-tx_line.plot_waveforms()
+        Vd, Id = self.get_voltage_and_current(d)
+        print(f"\n--- Values at {d} meters from the load ---")
+        print(f"Normalized Voltage (Vd): {Vd:.3f}")
+        print(f"   - Magnitude: {np.abs(Vd):.3f} V")
+        print(f"   - Phase: {np.angle(Vd, deg=True):.2f} degrees")
+        print(f"Normalized Current (Id): {Id:.3f} A")
+        print(f"   - Magnitude: {np.abs(Id):.3f} A")
+        print(f"   - Phase: {np.angle(Id, deg=True):.2f} degrees")
+        print("------------------------------------------")
+
+
+    def plot_waveforms(self):
+        """Plots the voltage and current standing wave patterns on separate subplots."""
+        d = np.linspace(0, self.length, 500) # Distance from the load
+        Vd_vals, Id_vals = self.get_voltage_and_current(d)
+
+        # Create a figure with two subplots, one for voltage and one for current
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
+        fig.suptitle('Voltage and Current Standing Wave Patterns', fontsize=16)
+
+        # --- Voltage Standing Wave Plot ---
+        ax1.plot(d, np.abs(Vd_vals), label='|V(d)|', color='blue')
+        ax1.set_title('Voltage Standing Wave')
+        ax1.set_ylabel('Normalized Voltage Magnitude')
+        ax1.grid(True, which='both', linestyle=':')
+        ax1.legend()
+        V_max = np.max(np.abs(Vd_vals))
+        V_min = np.min(np.abs(Vd_vals))
+        ax1.text(0.02, 0.95, f'SWR ≈ {V_max/V_min:.3f}', transform=ax1.transAxes, verticalalignment='top',
+                 bbox=dict(boxstyle='round,pad=0.5', fc='wheat', alpha=0.5))
+
+
+        # --- Current Standing Wave Plot ---
+        ax2.plot(d, np.abs(Id_vals), label='|I(d)|', color='red')
+        ax2.set_title('Current Standing Wave')
+        ax2.set_xlabel('Distance from Load (m)')
+        ax2.set_ylabel('Normalized Current Magnitude (A)')
+        ax2.grid(True, which='both', linestyle=':')
+        ax2.legend()
+
+        plt.xlim(0, self.length)
+        plt.tight_layout(rect=[0, 0, 1, 0.96]) # Adjust layout to make room for suptitle
+        plt.show()
+
+    def summarize(self):
+        """Prints a summary of all calculated parameters."""
+        print("--- Transmission Line Analysis Summary ---")
+        print(f"Frequency: {self.freq/1e6:.2f} MHz")
+        print("\nCalculated Secondary Constants:")
+        print(f"  - Characteristic Impedance (Z0): {self.Z0:.2f} Ω")
+        print(f"  - Propagation Constant (γ): {self.gamma:.4f}")
+        print(f"  - Attenuation Constant (α): {self.alpha:.4f} Np/m")
+        print(f"  - Phase Constant (β): {self.beta:.4f} rad/m")
+        print("\nPerformance Parameters:")
+        print(f"  - Load Reflection Coefficient (ΓL): {self.gamma_L:.3f}")
+        print(f"  - SWR: {self.swr:.3f}")
+        print(f"  - Input Impedance (Z_in): {self.Z_in:.2f} Ω")
+        print("------------------------------------------")
