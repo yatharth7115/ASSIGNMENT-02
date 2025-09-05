@@ -1,0 +1,146 @@
+import numpy as np
+import pandas as pd
+
+class TransmissionLine:
+    """Simulates a generic transmission line and computes key parameters."""
+
+    def __init__(self, R, L, G, C, freq, length, ZL):
+        # --- Primary line constants ---
+        self.R = R
+        self.L = L
+        self.G = G
+        self.C = C
+        self.freq = freq
+        self.length = length
+        self.ZL = complex(ZL)
+
+        # --- Derived values ---
+        self.omega = 2 * np.pi * self.freq
+
+        # --- Compute parameters ---
+        self.calculate_secondary_constants()
+        self.gamma_L = self.calculate_reflection_coefficient()
+        self.swr = self.calculate_swr()
+        self.Z_in = self.calculate_input_impedance()
+
+    def calculate_secondary_constants(self):
+        """Calculates characteristic impedance (Z0) and propagation constant (gamma)."""
+        Z = self.R + 1j * self.omega * self.L
+        Y = self.G + 1j * self.omega * self.C
+        
+        if Y == 0:
+            raise ValueError("Invalid line: G and C cannot both be zero.")
+
+        self.Z0 = np.sqrt(Z / Y)
+        self.gamma = np.sqrt(Z * Y)
+        self.alpha = self.gamma.real
+        self.beta = self.gamma.imag
+
+    def calculate_reflection_coefficient(self):
+        """Returns the reflection coefficient at the load."""
+        return (self.ZL - self.Z0) / (self.ZL + self.Z0)
+
+    def calculate_swr(self):
+        """Returns the standing wave ratio (SWR)."""
+        mag = np.abs(self.gamma_L)
+        # SWR is inf if mag is 1.0, else (1+mag)/(1-mag)
+        return np.inf if np.isclose(mag, 1.0) else (1 + mag) / (1 - mag)
+
+    def calculate_input_impedance(self):
+        """Computes the input impedance, Zin."""
+        tanh_gamma_l = np.tanh(self.gamma * self.length)
+        numerator = self.ZL + self.Z0 * tanh_gamma_l
+        denominator = self.Z0 + self.ZL * tanh_gamma_l
+        return self.Z0 * (numerator / denominator)
+
+    def get_voltage_and_current(self, d):
+        """
+        Computes normalized voltage and current at distance 'd' from load.
+        V+ is assumed to be 1 (normalized).
+        """
+        V = (np.exp(self.gamma * d) + self.gamma_L * np.exp(-self.gamma * d))
+        I = (1 / self.Z0) * (np.exp(self.gamma * d) - self.gamma_L * np.exp(-self.gamma * d))
+        return V, I
+
+
+# --- Dataset Generator Function ---
+def generate_dataset_with_distance(num_samples=1000):
+    """
+    Generates a dataset for ML training.
+    Inputs: R, L, G, C, freq, length, ZL, distance 'd'
+    Outputs: Scalar electrical quantities (Z0, gamma, SWR, Zin), excluding voltage/current profiles.
+    """
+    data = []
+    print(f"Generating {num_samples} samples...")
+
+    for _ in range(num_samples):
+        # Randomize input parameters within practical ranges
+        R = np.random.uniform(0.01, 5.0)    # Ohms/m
+        L = np.random.uniform(1e-7, 1e-6)   # H/m
+        G = np.random.uniform(1e-9, 1e-3)   # S/m
+        C = np.random.uniform(1e-11, 1e-10) # F/m
+        freq = 10 ** np.random.uniform(6, 10) # 1 MHz to 10 GHz
+        length = np.random.uniform(0.1, 10) # m
+        ZL_real = np.random.uniform(10, 300)
+        ZL_imag = np.random.uniform(-300, 300)
+        ZL = complex(ZL_real, ZL_imag)
+        d = np.random.uniform(0, length)
+        
+        try:
+            line = TransmissionLine(R, L, G, C, freq, length, ZL)
+            
+            sample = {
+                # Inputs
+                'R': R,
+                'L': L,
+                'G': G,
+                'C': C,
+                'frequency': freq,
+                'length': length,
+                'ZL_real': ZL_real,
+                'ZL_imag': ZL_imag,
+                'distance_d': d,
+
+                # Outputs
+                'Z0_real': line.Z0.real,
+                'Z0_imag': line.Z0.imag,
+                'alpha': line.alpha,
+                'beta': line.beta,
+                'gamma_L_real': line.gamma_L.real,
+                'gamma_L_imag': line.gamma_L.imag,
+                'SWR': line.swr,
+                'Zin_real': line.Z_in.real,
+                'Zin_imag': line.Z_in.imag
+            }
+            data.append(sample)
+
+        except (ValueError, ZeroDivisionError) as e:
+            print(f"Sample skipped: {e}")
+            continue
+
+    if not data:
+        print("No valid samples generated.")
+        return pd.DataFrame()
+
+    df = pd.DataFrame(data)
+    print("Dataset generation complete.")
+    return df
+
+
+# --- Main Execution Block ---
+if __name__ == "__main__":
+    print("== Transmission Line Dataset Generator ==")
+    dataset = generate_dataset_with_distance(num_samples=10000)
+    
+    if not dataset.empty:
+        print("\n--- Preview (First 5 Rows) ---")
+        print(dataset.head())
+        
+        print("\n--- Descriptive Statistics ---")
+        print(dataset.describe())
+        
+        output_file = "transmission_line_scalar_dataset.csv"
+        dataset.to_csv(output_file, index=False)
+        print(f"\nDataset saved to '{output_file}'")
+    else:
+        print("\nNo data was saved due to errors during generation.")
