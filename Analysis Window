@@ -1,0 +1,49 @@
+# ===============================================================
+# ANALYSIS WINDOW
+# ===============================================================
+
+def analysis_window(input_params, model, scaler_x, scaler_y):
+    """
+    Accepts a dictionary of line parameters, performs both analytical calculations
+    and neural network-based predictions, and compares the results.
+    Also visualizes the standing wave pattern based on analytical calculations.
+    """
+    print("\n--- Final Design and Analysis Window ---")
+    
+    # -------------------------------------------------------------
+    # 1. Analytical Calculation (Serves as Ground Truth)
+    # -------------------------------------------------------------
+    print("\n[1] ANALYTICAL RESULTS (Ground Truth) 📋")
+
+    # Extract necessary inputs for analytical evaluation
+    analytical_params = {
+        'R': input_params['R'],
+        'L': input_params['L'],
+        'G': input_params['G'],
+        'C': input_params['C'],
+        'freq': input_params['freq'],
+        'length': input_params['length'],
+        'ZL': input_params['ZL'] # Use complex load impedance
+    }
+
+    # Initialize transmission line object
+    line = TransmissionLine(**analytical_params)
+
+    # Print calculated performance metrics
+    print(f" - Characteristic Impedance (Z0): ({line.Z0.real:.2f} + {line.Z0.imag:.2f}j) Ω")
+    print(f" - Attenuation Constant (α): {line.alpha:.4f} Np/m")
+    print(f" - Phase Constant (β): {line.beta:.4f} rad/m")
+    print(f" - SWR: {line.swr:.3f}")
+    print(f" - Input Impedance (Z_in): ({line.Z_in.real:.2f} + {line.Z_in.imag:.2f}j) Ω")
+
+    # -------------------------------------------------------------
+    # 2. Neural Network-Based Prediction
+    # -------------------------------------------------------------
+    print("\n[2] NEURAL NETWORK PREDICTION")
+
+    # Convert input parameters to DataFrame format
+    input_df = pd.DataFrame([input_params])
+
+    # Define input feature order for the model
+    features = ['R', 'L', 'G', 'C', 'freq', 'length', 'ZL_real', 'ZL_imag']
+    input_features = input_df[features]
