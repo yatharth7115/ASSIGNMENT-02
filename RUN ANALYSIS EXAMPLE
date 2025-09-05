@@ -1,0 +1,17 @@
+# --- Define example parameters to validate the analysis window function ---
+test_params = {
+    'R': 0.12,          # Ohms per meter
+    'L': 260e-9,        # Inductance per meter (H)
+    'G': 1.2e-6,        # Conductance per meter (S)
+    'C': 110e-12,       # Capacitance per meter (F)
+    'freq': 155e6,      # Operating frequency: 155 MHz
+    'length': 12,       # Cable length in meters
+    'ZL': 75 + 30j      # Load impedance (Ohms)
+}
+
+# Include real and imaginary parts of load impedance for model input
+test_params['ZL_real'] = test_params['ZL'].real
+test_params['ZL_imag'] = test_params['ZL'].imag
+
+# Execute the analysis window function with these parameters and scaling objects
+analysis_window(test_params, model, scaler_x, scaler_y)
